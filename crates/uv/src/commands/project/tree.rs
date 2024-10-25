@@ -63,6 +63,7 @@ pub(crate) async fn tree(
         Some(
             ProjectInterpreter::discover(
                 &workspace,
+                project_dir,
                 python.as_deref().map(PythonRequest::parse),
                 python_preference,
                 python_downloads,

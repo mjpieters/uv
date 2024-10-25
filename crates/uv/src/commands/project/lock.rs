@@ -98,6 +98,7 @@ pub(crate) async fn lock(
         // Find an interpreter for the project
         interpreter = ProjectInterpreter::discover(
             &workspace,
+            project_dir,
             python.as_deref().map(PythonRequest::parse),
             python_preference,
             python_downloads,

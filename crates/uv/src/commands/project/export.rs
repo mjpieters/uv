@@ -89,6 +89,7 @@ pub(crate) async fn export(
         // Find an interpreter for the project
         interpreter = ProjectInterpreter::discover(
             project.workspace(),
+            project_dir,
             python.as_deref().map(PythonRequest::parse),
             python_preference,
             python_downloads,
