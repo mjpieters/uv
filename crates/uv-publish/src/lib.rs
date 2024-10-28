@@ -57,7 +57,10 @@ pub enum PublishError {
     TrustedPublishing(#[from] TrustedPublishingError),
     #[error("Failed to query skip existing index")]
     SkipExistingIndex(#[source] uv_client::Error),
-    #[error("Local file and index file for {filename} do not match. Local: {hash_algorithm}={local}, Remote: {hash_algorithm}={remote}")]
+    #[error(
+        "Local file and index file do not match for {filename}. \
+        Local: {hash_algorithm}={local}, Remote: {hash_algorithm}={remote}"
+    )]
     HashMismatch {
         filename: Box<DistFilename>,
         hash_algorithm: HashAlgorithm,
