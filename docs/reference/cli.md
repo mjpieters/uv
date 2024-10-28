@@ -7689,9 +7689,9 @@ uv publish [OPTIONS] [FILES]...
 
 <p>This option allows retrying publishing that failed after only some, but not all files have been uploaded, and handles error due to parallel uploads of the same file.</p>
 
-<p>Before uploading, the index is checked. If the exact same file already exists in the index, the file will not be uploaded. If an error occurred during the upload, the index is checked again, if the file may have been added in the meantime.</p>
+<p>Before uploading, the index is checked. If the exact same file already exists in the index, the file will not be uploaded. If an error occurred during the upload, the index is checked again, to handle cases where the identical file was uploaded twice in parallel.</p>
 
-<p>The exact behavior varies from index to index. On PyPI, uploading the same file succeeds even without <code>--skip-existing</code>, while most other indexes error.</p>
+<p>The exact behavior will vary based on the index. When uploading to PyPI, uploading the same file succeeds even without <code>--skip-existing</code>, while most other indexes error.</p>
 
 <p>The index must provide one of the supported hashes (SHA-256, SHA-384, or SHA-512).</p>
 

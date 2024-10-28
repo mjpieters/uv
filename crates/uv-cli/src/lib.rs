@@ -4805,10 +4805,10 @@ pub struct PublishArgs {
     ///
     /// Before uploading, the index is checked. If the exact same file already exists in the index,
     /// the file will not be uploaded. If an error occurred during the upload, the index is checked
-    /// again, if the file may have been added in the meantime.
+    /// again, to handle cases where the identical file was uploaded twice in parallel.
     ///
-    /// The exact behavior varies from index to index. On PyPI, uploading the same file succeeds
-    /// even without `--skip-existing`, while most other indexes error.
+    /// The exact behavior will vary based on the index. When uploading to PyPI, uploading the same
+    /// file succeeds even without `--skip-existing`, while most other indexes error.
     ///
     /// The index must provide one of the supported hashes (SHA-256, SHA-384, or SHA-512).
     #[arg(long,env = EnvVars::UV_PUBLISH_SKIP_EXISTING)]
