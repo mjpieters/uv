@@ -486,6 +486,20 @@ fn help_subsubcommand() {
               
               By default, uv will exit successfully if the version is already installed.
 
+          --default
+              Use as the default Python version.
+              
+              By default, only a `python{major}.{minor}` executable is installed, e.g., `python3.10`.
+              When the `--default` flag is used, `python{major}`, e.g., `python3`, and `python`
+              executables are also installed.
+              
+              Alternative Python variants will still include their tag. For example, installing
+              3.13+freethreaded with `--default` will include in `python3t` and `pythont`, not `python3`
+              and `python`.
+              
+              If multiple Python versions are requested during the installation, the first request will
+              be the default.
+
     Cache options:
       -n, --no-cache
               Avoid reading from or writing to the cache, instead using a temporary directory for the
@@ -716,6 +730,7 @@ fn help_flag_subsubcommand() {
 
     Options:
       -r, --reinstall  Reinstall the requested Python version, if it's already installed
+          --default    Use as the default Python version
 
     Cache options:
       -n, --no-cache               Avoid reading from or writing to the cache, instead using a temporary

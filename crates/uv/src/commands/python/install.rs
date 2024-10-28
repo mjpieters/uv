@@ -29,10 +29,12 @@ use crate::commands::{elapsed, ExitStatus};
 use crate::printer::Printer;
 
 /// Download and install Python versions.
+#[allow(clippy::fn_params_excessive_bools)]
 pub(crate) async fn install(
     project_dir: &Path,
     targets: Vec<String>,
     reinstall: bool,
+    default: bool,
     python_downloads: PythonDownloads,
     native_tls: bool,
     connectivity: Connectivity,
@@ -99,6 +101,7 @@ pub(crate) async fn install(
                     installation.key().green(),
                 )?;
             }
+            // TODO(zanieb): Ensure executables are linked for already-installed versions
             if reinstall {
                 uninstalled.insert(installation.key());
                 unfilled_requests.push(download_request);
@@ -186,35 +189,46 @@ pub(crate) async fn install(
                 let managed = ManagedPythonInstallation::new(path.clone())?;
                 managed.ensure_externally_managed()?;
                 managed.ensure_canonical_executables()?;
-                match managed.create_bin_link(&bin) {
-                    Ok(executable) => {
-                        debug!("Installed {} executable to {}", key, executable.display());
-                    }
-                    Err(uv_python::managed::Error::LinkExecutable { from, to, err })
-                        if err.kind() == ErrorKind::AlreadyExists =>
-                    {
-                        // TODO(zanieb): Add `--force`
-                        if reinstall {
-                            fs_err::remove_file(&to)?;
-                            let executable = managed.create_bin_link(&bin)?;
-                            debug!(
-                                "Replaced {} executable at {}",
-                                key,
-                                executable.user_display()
-                            );
-                        } else {
-                            if !is_same_file(&to, &from).unwrap_or_default() {
-                                errors.push((
-                                    key,
-                                    anyhow::anyhow!(
-                                        "Executable already exists at `{}`. Use `--reinstall` to force replacement.",
-                                        to.user_display()
-                                    ),
-                                ));
+
+                // TODO(zanieb): Only apply `default` for the _first_ requested version
+                let targets = if default {
+                    vec![
+                        managed.key().executable_name_minor(),
+                        managed.key().executable_name_major(),
+                        managed.key().executable_name(),
+                    ]
+                } else {
+                    vec![managed.key().executable_name_minor()]
+                };
+
+                for target in targets {
+                    let target = bin.join(target);
+                    match managed.create_bin_link(&target) {
+                        Ok(()) => {
+                            debug!("Installed {} executable to {}", key, target.display());
+                        }
+                        Err(uv_python::managed::Error::LinkExecutable { from, to, err })
+                            if err.kind() == ErrorKind::AlreadyExists =>
+                        {
+                            // TODO(zanieb): Add `--force`
+                            if reinstall {
+                                fs_err::remove_file(&to)?;
+                                managed.create_bin_link(&target)?;
+                                debug!("Replaced {} executable at {}", key, target.user_display());
+                            } else {
+                                if !is_same_file(&to, &from).unwrap_or_default() {
+                                    errors.push((
+                                        key,
+                                        anyhow::anyhow!(
+                                            "Executable already exists at `{}`. Use `--reinstall` to force replacement.",
+                                            to.user_display()
+                                        ),
+                                    ));
+                                }
                             }
                         }
+                        Err(err) => return Err(err.into()),
                     }
-                    Err(err) => return Err(err.into()),
                 }
             }
             Err(err) => {
@@ -280,7 +294,7 @@ pub(crate) async fn install(
                         " {} {} ({})",
                         "+".green(),
                         event.key.bold(),
-                        event.key.versioned_executable_name()
+                        event.key.executable_name_minor()
                     )?;
                 }
                 ChangeEventKind::Removed => {
@@ -289,7 +303,7 @@ pub(crate) async fn install(
                         " {} {} ({})",
                         "-".red(),
                         event.key.bold(),
-                        event.key.versioned_executable_name()
+                        event.key.executable_name_minor()
                     )?;
                 }
                 ChangeEventKind::Reinstalled => {
@@ -298,7 +312,7 @@ pub(crate) async fn install(
                         " {} {} ({})",
                         "~".yellow(),
                         event.key.bold(),
-                        event.key.versioned_executable_name()
+                        event.key.executable_name_minor()
                     )?;
                 }
             }

@@ -1059,6 +1059,7 @@ async fn run(mut cli: Cli) -> Result<ExitStatus> {
                 &project_dir,
                 args.targets,
                 args.reinstall,
+                args.default,
                 globals.python_downloads,
                 globals.native_tls,
                 globals.connectivity,

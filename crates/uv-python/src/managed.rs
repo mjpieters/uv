@@ -475,26 +475,24 @@ impl ManagedPythonInstallation {
         Ok(())
     }
 
-    /// Create a link to the Python executable in the given `bin` directory.
-    pub fn create_bin_link(&self, bin: &Path) -> Result<PathBuf, Error> {
+    /// Create a link to the managed Python executable.
+    pub fn create_bin_link(&self, target: &Path) -> Result<(), Error> {
         let python = self.executable();
 
+        let bin = target.parent().ok_or(Error::NoExecutableDirectory)?;
         fs_err::create_dir_all(bin).map_err(|err| Error::ExecutableDirectory {
             to: bin.to_path_buf(),
             err,
         })?;
 
-        // TODO(zanieb): Add support for a "default" which
-        let python_in_bin = bin.join(self.key.versioned_executable_name());
-
-        match uv_fs::symlink_copy_fallback_file(&python, &python_in_bin) {
-            Ok(()) => Ok(python_in_bin),
+        match uv_fs::symlink_copy_fallback_file(&python, target) {
+            Ok(()) => Ok(()),
             Err(err) if err.kind() == io::ErrorKind::NotFound => {
                 Err(Error::MissingExecutable(python.clone()))
             }
             Err(err) => Err(Error::LinkExecutable {
                 from: python,
-                to: python_in_bin,
+                to: target.to_path_buf(),
                 err,
             }),
         }
