@@ -19,7 +19,6 @@ fn python_install() {
     Searching for Python installations
     Installed Python 3.13.0 in [TIME]
      + cpython-3.13.[X]-[PLATFORM]
-    warning: `[TEMP_DIR]/bin` is not on your PATH. To use the installed Python executable, run `export PATH="[TEMP_DIR]/bin:$PATH"`.
     "###);
 
     let bin_python = context
@@ -79,7 +78,6 @@ fn python_install() {
     Found: cpython-3.13.[X]-[PLATFORM]
     Installed Python 3.13.0 in [TIME]
      ~ cpython-3.13.[X]-[PLATFORM]
-    warning: `[TEMP_DIR]/bin` is not on your PATH. To use the installed Python executable, run `export PATH="[TEMP_DIR]/bin:$PATH"`.
     "###);
 
     // The executable should still be present in the bin directory
@@ -129,7 +127,6 @@ fn python_install_freethreaded() {
     Searching for Python versions matching: Python 3.13t
     Installed Python 3.13.0 in [TIME]
      + cpython-3.13.[X]+freethreaded-[PLATFORM]
-    warning: `[TEMP_DIR]/bin` is not on your PATH. To use the installed Python executable, run `export PATH="[TEMP_DIR]/bin:$PATH"`.
     "###);
 
     let bin_python = context
@@ -165,7 +162,6 @@ fn python_install_freethreaded() {
     Searching for Python versions matching: Python 3.13
     Installed Python 3.13.0 in [TIME]
      + cpython-3.13.[X]-[PLATFORM]
-    warning: `[TEMP_DIR]/bin` is not on your PATH. To use the installed Python executable, run `export PATH="[TEMP_DIR]/bin:$PATH"`.
     "###);
 
     // Should not work with older Python versions
@@ -206,7 +202,6 @@ fn python_install_default() {
     Searching for Python installations
     Installed Python 3.13.0 in [TIME]
      + cpython-3.13.[X]-[PLATFORM]
-    warning: `[TEMP_DIR]/bin` is not on your PATH. To use the installed Python executable, run `export PATH="[TEMP_DIR]/bin:$PATH"`.
     "###);
 
     let bin_python_minor = context
@@ -241,7 +236,6 @@ fn python_install_default() {
     Found: cpython-3.13.[X]-[PLATFORM]
     Installed Python 3.13.0 in [TIME]
      ~ cpython-3.13.[X]-[PLATFORM]
-    warning: `[TEMP_DIR]/bin` is not on your PATH. To use the installed Python executable, run `export PATH="[TEMP_DIR]/bin:$PATH"`.
     "###);
 
     // Now we should have an unversioned and major-versioned executable
@@ -277,7 +271,6 @@ fn python_install_default() {
     Installed 2 versions in [TIME]
      + cpython-3.12.[X]-[PLATFORM]
      + cpython-3.13.[X]-[PLATFORM]
-    warning: `[TEMP_DIR]/bin` is not on your PATH. To use the installed Python executable, run `export PATH="[TEMP_DIR]/bin:$PATH"`.
     error: Failed to install cpython-3.12.[X]-[PLATFORM]
       Caused by: Executable already exists at `bin/python3`. Use `--reinstall` to force replacement.
     error: Failed to install cpython-3.12.[X]-[PLATFORM]

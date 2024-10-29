@@ -1,15 +1,20 @@
 use core::fmt;
-use fs_err as fs;
-use itertools::Itertools;
 use std::cmp::Reverse;
 use std::ffi::OsStr;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+
+use fs_err::{self as fs, File};
+use itertools::Itertools;
+use same_file::is_same_file;
 use thiserror::Error;
 use tracing::{debug, warn};
 
+use uv_fs::{LockedFile, Simplified};
 use uv_state::{StateBucket, StateStore};
+use uv_static::EnvVars;
+use uv_trampoline_builder::{windows_python_launcher, Launcher};
 
 use crate::downloads::Error as DownloadError;
 use crate::implementation::{
@@ -21,9 +26,6 @@ use crate::platform::Error as PlatformError;
 use crate::platform::{Arch, Libc, Os};
 use crate::python_version::PythonVersion;
 use crate::{PythonRequest, PythonVariant};
-use uv_fs::{LockedFile, Simplified};
-use uv_static::EnvVars;
-
 #[derive(Error, Debug)]
 pub enum Error {
     #[error(transparent)]
@@ -74,6 +76,8 @@ pub enum Error {
     },
     #[error("Failed to find a directory to install executables into")]
     NoExecutableDirectory,
+    #[error(transparent)]
+    LauncherError(#[from] uv_trampoline_builder::Error),
     #[error("Failed to read managed Python directory name: {0}")]
     NameError(String),
     #[error("Failed to construct absolute path to managed Python directory: {}", _0.user_display())]
@@ -485,16 +489,52 @@ impl ManagedPythonInstallation {
             err,
         })?;
 
-        match uv_fs::symlink_copy_fallback_file(&python, target) {
-            Ok(()) => Ok(()),
-            Err(err) if err.kind() == io::ErrorKind::NotFound => {
-                Err(Error::MissingExecutable(python.clone()))
+        if cfg!(unix) {
+            match uv_fs::symlink_copy_fallback_file(&python, target) {
+                Ok(()) => Ok(()),
+                Err(err) if err.kind() == io::ErrorKind::NotFound => {
+                    Err(Error::MissingExecutable(python.clone()))
+                }
+                Err(err) => Err(Error::LinkExecutable {
+                    from: python,
+                    to: target.to_path_buf(),
+                    err,
+                }),
             }
-            Err(err) => Err(Error::LinkExecutable {
-                from: python,
-                to: target.to_path_buf(),
-                err,
-            }),
+        } else if cfg!(windows) {
+            // TODO(zanieb): Install GUI launchers as well
+            let launcher = windows_python_launcher(&python, false)?;
+            match File::create(target)?.write_all(launcher.as_ref()) {
+                Ok(()) => Ok(()),
+                Err(err) if err.kind() == io::ErrorKind::NotFound => {
+                    Err(Error::MissingExecutable(python.clone()))
+                }
+                Err(err) => Err(Error::LinkExecutable {
+                    from: python,
+                    to: target.to_path_buf(),
+                    err,
+                }),
+            }
+        } else {
+            unimplemented!("Only Windows and Unix systems are supported.")
+        }
+    }
+
+    /// Returns `true` if the path is a link to this installation's binary, e.g., as created by
+    /// [`ManagedPythonInstallation::create_bin_link`].
+    pub fn is_bin_link(&self, path: &Path) -> bool {
+        if cfg!(unix) {
+            is_same_file(path, self.executable()).unwrap_or_default()
+        } else if cfg!(windows) {
+            let Some(launcher) = Launcher::try_from_path(path).unwrap_or_default() else {
+                return false;
+            };
+            if !matches!(launcher.kind, uv_trampoline_builder::LauncherKind::Python) {
+                return false;
+            }
+            launcher.python_path == self.executable()
+        } else {
+            unreachable!("Only Windows and Unix are supported")
         }
     }
 }
