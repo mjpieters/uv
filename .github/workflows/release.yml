@@ -106,9 +106,11 @@ jobs:
     with:
       plan: ${{ needs.plan.outputs.val }}
     secrets: inherit
+    # docker jobs get escalated permissions, so they can sign the images
     permissions:
       "contents": "read"
       "packages": "write"
+      "id-token": "write"
 
   # Build and package all the platform-agnostic(ish) things
   build-global-artifacts:
