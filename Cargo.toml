@@ -334,3 +334,5 @@ github-custom-job-permissions = { "build-docker" = { packages = "write", content
 install-updater = false
 # Path that installers should place binaries in
 install-path = "CARGO_HOME"
+# allow dirty while testing
+allow-dirty = ["ci"]
