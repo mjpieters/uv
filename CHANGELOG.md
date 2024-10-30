@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.29-cosigntest.0
+
+- Test docker image signing in my fork.
+
 ## 0.4.28
 
 ### Enhancements
