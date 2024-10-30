@@ -246,8 +246,8 @@ jobs:
           tags: |
             ${{ env.TAG_PATTERNS }}
 
-      - name: Build and push
-        id: build-and-push
+      - name: Build
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -255,14 +255,14 @@ jobs:
           # We do not really need to cache here as the Dockerfile is tiny
           #cache-from: type=gha,scope=uv-${{ env.IMAGE_REF }}
           #cache-to: type=gha,mode=min,scope=uv-${{ env.IMAGE_REF }}
-          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
+          load: true
 
       - name: Sign the images with GitHub OIDC Token
         env:
-          DIGEST: ${{ steps.build-and-push.outputs.digest }}
+          DIGEST: ${{ steps.build.outputs.digest }}
           TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           images=""
@@ -270,6 +270,13 @@ jobs:
             images+="${tag}@${DIGEST} "
           done
           cosign sign --yes ${images}
+
+      - name: Push
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          docker push --all-tags "${UV_BASE_IMG}@${DIGEST}"
+
 
   # This is effectively a duplicate of `docker-publish` to make https://github.com/astral-sh/uv/pkgs/container/uv
   # show the uv base image first since GitHub always shows the last updated image digests
@@ -316,7 +323,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Adapted from https://docs.docker.com/build/ci/github-actions/multi-platform/
-      - name: Create manifest list and push
+      - name: Create manifest list
         working-directory: /tmp/digests
         # The readarray part is used to make sure the quoting and special characters are preserved on expansion (e.g. spaces)
         # The jq command expands the docker/metadata json "tags" array entry to `-t tag1 -t tag2 ...` for each tag in the array
@@ -324,7 +331,7 @@ jobs:
         # The final command becomes `docker buildx imagetools create -t tag1 -t tag2 ... <UV_BASE_IMG>@sha256:<sha256_1> <UV_BASE_IMG>@sha256:<sha256_2> ...`
         run: |
           readarray -t lines <<< "$DOCKER_METADATA_OUTPUT_ANNOTATIONS"; annotations=(); for line in "${lines[@]}"; do annotations+=(--annotation "$line"); done
-          docker buildx imagetools create \
+          docker buildx imagetools create --dry-run \
             "${annotations[@]}" \
             $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.UV_BASE_IMG }}@sha256:%s ' *)
@@ -358,3 +365,17 @@ jobs:
             images+="${tag}@${DIGEST} "
           done
           cosign sign --yes ${images}
+
+      - name: Create manifest list
+        working-directory: /tmp/digests
+        # The readarray part is used to make sure the quoting and special characters are preserved on expansion (e.g. spaces)
+        # The jq command expands the docker/metadata json "tags" array entry to `-t tag1 -t tag2 ...` for each tag in the array
+        # The printf will expand the base image with the `<UV_BASE_IMG>@sha256:<sha256> ...` for each sha256 in the directory
+        # The final command becomes `docker buildx imagetools create -t tag1 -t tag2 ... <UV_BASE_IMG>@sha256:<sha256_1> <UV_BASE_IMG>@sha256:<sha256_2> ...`
+        run: |
+          readarray -t lines <<< "$DOCKER_METADATA_OUTPUT_ANNOTATIONS"; annotations=(); for line in "${lines[@]}"; do annotations+=(--annotation "$line"); done
+          docker buildx imagetools create \
+            "${annotations[@]}" \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.UV_BASE_IMG }}@sha256:%s ' *)
+
